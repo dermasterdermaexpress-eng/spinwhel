@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Spin Wheel</title>
+<style>
+:root{--bg:#141414;--card:#1c1c1d;--line:#2c2c2e;--field:#111;--txt:#f2f2f2;--mute:#8d8d92;--acc:#c8ff4d;--accTxt:#10130a;color-scheme:dark;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--txt);font-family:"Syne","Segoe UI",system-ui,sans-serif;min-height:100vh}
+.wrap{max-width:1000px;margin:0 auto;padding:20px 16px 40px;display:grid;gap:20px;grid-template-columns:1fr}
+@media(min-width:820px){.wrap{grid-template-columns:1fr 380px;align-items:start}}
+.stage{display:flex;flex-direction:column;align-items:center;gap:20px}
+.wheelBox{position:relative;width:min(92vw,520px);aspect-ratio:1}
+canvas{width:100%;height:100%;display:block}
+.ptr{position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:14px solid transparent;border-right:14px solid transparent;border-top:30px solid var(--acc);filter:drop-shadow(0 2px 4px #0008);z-index:2}
+button{font:inherit;cursor:pointer;border:0}
+.spin{background:var(--acc);color:var(--accTxt);font-weight:800;font-size:1.2rem;padding:14px 56px;border-radius:999px}
+.spin:disabled{opacity:.5;cursor:default}
+.card{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:20px;margin-bottom:16px}
+h2{margin:0 0 14px;font-size:1.3rem;font-weight:800;display:flex;justify-content:space-between;align-items:center}
+h2 button{background:none;color:var(--mute);font-size:.85rem;font-weight:500}
+.row{display:flex;align-items:center;gap:8px;background:var(--field);border:1px solid var(--line);border-radius:999px;padding:0 6px 0 16px;height:46px;margin-bottom:8px}
+.row .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .pc{color:var(--mute);font-size:.85rem}
+.row .x{background:none;color:var(--mute);font-size:1.1rem;width:32px;height:32px}
+.row svg{width:15px;height:15px;stroke:var(--acc);fill:none;stroke-width:2}
+.add{display:flex;gap:8px;margin-top:12px}
+input[type=text],select{flex:1;min-width:0;height:46px;background:var(--field);border:1px solid var(--line);border-radius:999px;color:var(--txt);font:inherit;padding:0 16px}
+.add .btn{background:var(--acc);color:var(--accTxt);font-weight:700;padding:0 24px;border-radius:999px}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);background:var(--field);border:1px solid var(--line);border-radius:999px;padding:4px;margin-bottom:16px}
+.seg button{background:none;color:var(--mute);font-weight:700;padding:10px 0;border-radius:999px}
+.seg button.on{background:var(--acc);color:var(--accTxt)}
+.lbl{color:var(--mute);font-size:.85rem;margin-bottom:8px}
+.hint{color:var(--mute);font-size:.85rem;margin:10px 0 0;line-height:1.4}
+.w{margin-bottom:12px}
+.w div{display:flex;justify-content:space-between;font-size:.9rem;margin-bottom:4px}
+input[type=range]{width:100%;accent-color:var(--acc)}
+label.ck{display:flex;gap:8px;align-items:center;color:var(--mute);font-size:.9rem;margin-top:8px}
+.tools{display:flex;gap:8px;margin-top:10px}
+.tools button{background:none;border:1px solid var(--line);color:var(--mute);border-radius:999px;padding:8px 14px;font-size:.85rem}
+.modal{position:fixed;inset:0;background:#000b;display:none;align-items:center;justify-content:center;z-index:5;padding:20px}
+.modal.show{display:flex}
+.box{background:var(--card);border:1px solid var(--line);border-radius:28px;padding:32px;text-align:center;max-width:380px;width:100%}
+.box small{color:var(--mute)}
+.box h3{font-size:2rem;margin:10px 0 22px;color:var(--acc);word-break:break-word}
+.box .btn{background:var(--acc);color:var(--accTxt);font-weight:700;padding:12px 32px;border-radius:999px;margin:0 4px}
+.box .btn.alt{background:none;border:1px solid var(--line);color:var(--txt)}
+.peek{position:fixed;right:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));width:40px;height:40px;border-radius:50%;background:none;color:var(--mute);opacity:.15;font-size:1.2rem;display:none;z-index:3}
+.peek.show{display:block}
+@media(max-width:819px){.wrap{padding:14px 12px 70px;gap:14px}.spin{width:100%;max-width:360px}.card{padding:16px;border-radius:20px}input[type=text],select{font-size:16px}.box{padding:24px}.box h3{font-size:1.6rem}.tools{flex-wrap:wrap}}
+body.focus .side{display:none}
+body.focus .wrap{grid-template-columns:1fr;min-height:100vh;min-height:100dvh;align-content:center;padding:12px}
+body.focus .wheelBox{width:min(94vw,calc(100dvh - 130px),800px)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="stage">
+    <div class="wheelBox"><div class="ptr"></div><canvas id="cv" width="1040" height="1040"></canvas></div>
+    <button class="spin" id="spin">Putar</button>
+  </div>
+  <div class="side">
+    <div class="card">
+      <h2><span>Peserta (<span id="cnt">0</span>)</span> <button id="focusBtn">Sembunyikan</button></h2>
+      <div id="list"></div>
+      <div class="add"><input type="text" id="in" placeholder="Tambah peserta" maxlength="40"><button class="btn" id="addBtn">Tambah</button></div>
+      <div class="tools"><button id="reset">Hapus semua</button><button id="bulk">Tempel banyak nama</button><button id="fs">Layar penuh</button></div>
+      <p class="hint">Nama tersimpan otomatis di browser ini, jadi tidak hilang saat halaman di-refresh.</p>
+    </div>
+    <div class="card" id="rigCard">
+      <h2>Pengaturan pemenang <button id="hide">Sembunyikan</button></h2>
+      <div id="rigBody">
+        <div class="seg" id="seg"><button data-m="fair">Adil</button><button data-m="rigged">Diatur</button><button data-m="weighted">Berbobot</button></div>
+        <div id="pRigged"><div class="lbl">Pemenang rahasia</div><select id="sel"></select><p class="hint">Roda akan selalu berhenti di nama ini. Sembunyikan panel ini sebelum roda ditampilkan ke orang lain.</p></div>
+        <div id="pWeighted"><div id="wl"></div><label class="ck"><input type="checkbox" id="showW"> Tampilkan ukuran irisan sesuai bobot</label></div>
+      </div>
+    </div>
+  </div>
+</div>
+<button class="peek" id="peek" aria-label="Buka pengaturan">⚙</button>
+<div class="modal" id="modal"><div class="box"><small>Pemenangnya</small><h3 id="win"></h3><button class="btn" id="again">Putar lagi</button><button class="btn alt" id="rm">Hapus nama ini</button></div></div>
+
+<script>
+const COLORS=["#c8ff4d","#ff6b57","#4dd2ff","#ffd24d","#b58cff","#4dffb0","#ff8ad8","#8fa8ff"];
+const KEY="spinwheel.v1";
+let S={choices:[],mode:"fair",secret:null,showW:false,hidden:false};
+let rot=0,spinning=false,uid=1;
+try{const r=JSON.parse(localStorage.getItem(KEY)||"null");if(r&&Array.isArray(r.choices))S=Object.assign(S,r)}catch(e){}
+if(!S.choices.length&&!localStorage.getItem(KEY)){S.choices=["Opsi 1","Opsi 2","Opsi 3","Opsi 4"].map(n=>({id:uid++,name:n,w:25}));S.secret=S.choices[0].id}
+uid=Math.max(0,...S.choices.map(c=>c.id))+1;
+const $=id=>document.getElementById(id);
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function pcts(){const t=S.choices.reduce((a,c)=>a+c.w,0)||1;return S.choices.map(c=>c.w/t*100)}
+function slices(){const n=S.choices.length;if(!n)return[];
+  const p=(S.mode==="weighted"&&S.showW)?pcts().map(x=>x/100):S.choices.map(()=>1/n);
+  let a=0;return p.map(f=>{const s=a;a+=f*Math.PI*2;return[s,a]})}
+function draw(){
+  const cv=$("cv"),c=cv.getContext("2d"),W=cv.width,R=W/2-8;
+  c.clearRect(0,0,W,W);c.save();c.translate(W/2,W/2);c.rotate(rot);
+  const sl=slices();
+  if(!sl.length){c.fillStyle="#1c1c1d";c.beginPath();c.arc(0,0,R,0,7);c.fill();c.fillStyle="#8d8d92";c.font="700 36px sans-serif";c.textAlign="center";c.fillText("Tambah peserta dulu",0,0)}
+  sl.forEach(([a,b],i)=>{
+    c.beginPath();c.moveTo(0,0);c.arc(0,0,R,a,b);c.closePath();
+    c.fillStyle=COLORS[i%COLORS.length];c.fill();c.strokeStyle="#141414";c.lineWidth=4;c.stroke();
+    c.save();c.rotate((a+b)/2);c.textAlign="right";c.fillStyle="#10130a";
+    c.font="700 "+Math.max(22,Math.min(40,300/Math.max(sl.length,6)*1.6))+"px 'Segoe UI',sans-serif";
+    let t=S.choices[i].name;if(t.length>16)t=t.slice(0,15)+"…";
+    c.fillText(t,R-28,12);c.restore()});
+  c.restore();
+  c.beginPath();c.arc(W/2,W/2,34,0,7);c.fillStyle="#141414";c.fill();c.lineWidth=6;c.strokeStyle="#c8ff4d";c.stroke();
+}
+const lock='<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg>';
+function esc(s){return s.replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]))}
+function render(){
+  if(!S.choices.some(c=>c.id===S.secret))S.secret=S.choices[0]?S.choices[0].id:null;
+  $("cnt").textContent=S.choices.length;
+  const p=pcts();
+  $("list").innerHTML=S.choices.map((c,i)=>`<div class="row"><span class="nm">${esc(c.name)}</span><button class="x" data-id="${c.id}" aria-label="Hapus ${esc(c.name)}">×</button></div>`).join("");
+  document.querySelectorAll("#seg button").forEach(b=>b.classList.toggle("on",b.dataset.m===S.mode));
+  $("pRigged").style.display=S.mode==="rigged"?"block":"none";
+  $("pWeighted").style.display=S.mode==="weighted"?"block":"none";
+  $("sel").innerHTML=S.choices.map(c=>`<option value="${c.id}"${c.id===S.secret?" selected":""}>${esc(c.name)}</option>`).join("");
+  $("wl").innerHTML=S.choices.map((c,i)=>`<div class="w"><div><span>${esc(c.name)}</span><span>${Math.round(p[i])}%</span></div><input type="range" min="0" max="100" value="${c.w}" data-id="${c.id}" aria-label="Bobot ${esc(c.name)}"></div>`).join("");
+  $("showW").checked=S.showW;
+  $("rigCard").style.display=S.hidden?"none":"block";
+  $("peek").classList.toggle("show",S.hidden||!!S.focus);
+  document.body.classList.toggle("focus",!!S.focus);
+  $("spin").disabled=spinning||S.choices.length<2;
+  draw();save();
+}
+function addNames(arr){arr.forEach(n=>{n=n.trim();if(n)S.choices.push({id:uid++,name:n.slice(0,40),w:25})});render()}
+$("addBtn").onclick=()=>{addNames([$("in").value]);$("in").value="";$("in").focus()};
+$("in").onkeydown=e=>{if(e.key==="Enter")$("addBtn").click()};
+$("list").onclick=e=>{const b=e.target.closest(".x");if(!b||spinning)return;S.choices=S.choices.filter(c=>c.id!=b.dataset.id);render()};
+$("seg").onclick=e=>{const b=e.target.closest("button");if(b&&!spinning){S.mode=b.dataset.m;render()}};
+$("sel").onchange=e=>{S.secret=+e.target.value;render()};
+$("showW").onchange=e=>{S.showW=e.target.checked;render()};
+$("hide").onclick=()=>{S.hidden=true;render()};
+function exitFs(){try{if(document.fullscreenElement)document.exitFullscreen()}catch(e){}}
+function setFocus(v){S.focus=v;if(!v)exitFs();render()}
+$("peek").onclick=()=>{if(S.focus)setFocus(false);else{S.hidden=false;render()}};
+$("focusBtn").onclick=()=>setFocus(true);
+$("fs").onclick=async()=>{try{if(document.fullscreenElement){await document.exitFullscreen()}else{S.focus=true;render();await document.documentElement.requestFullscreen()}}catch(e){}};
+document.addEventListener("fullscreenchange",()=>{if(!document.fullscreenElement&&S.focus){S.focus=false;render()}});
+$("wl").oninput=e=>{const c=S.choices.find(c=>c.id==e.target.dataset.id);if(c){c.w=+e.target.value;save();
+  const p=pcts();[...$("wl").children].forEach((d,i)=>d.firstChild.lastChild.textContent=Math.round(p[i])+"%");
+  [...document.querySelectorAll(".row .pc")].forEach((s,i)=>s.textContent=Math.round(p[i])+"%");draw()}};
+$("reset").onclick=()=>{if(!spinning&&confirm("Hapus semua peserta?")){S.choices=[];render()}};
+$("bulk").onclick=()=>{const t=prompt("Tempel nama, satu per baris atau pisahkan dengan koma:");if(t)addNames(t.split(/[\n,]+/))};
+function pickWinner(){
+  const n=S.choices.length;
+  if(S.mode==="rigged"){const i=S.choices.findIndex(c=>c.id===S.secret);if(i>=0)return i}
+  if(S.mode==="weighted"){const t=S.choices.reduce((a,c)=>a+c.w,0);
+    if(t>0){let r=Math.random()*t;for(let i=0;i<n;i++){r-=S.choices[i].w;if(r<0)return i}}}
+  return Math.floor(Math.random()*n)}
+let last=-1;
+$("spin").onclick=()=>{
+  if(spinning||S.choices.length<2)return;
+  spinning=true;$("spin").disabled=true;
+  const win=pickWinner(),[a,b]=slices()[win];
+  const mid=a+(b-a)*(0.2+Math.random()*0.6);
+  const want=Math.PI*1.5-mid;
+  const start=rot,mod=x=>((x%(Math.PI*2))+Math.PI*2)%(Math.PI*2);
+  const end=start+Math.PI*2*(6+Math.floor(Math.random()*3))+mod(want-start);
+  const dur=5200,t0=performance.now();
+  (function f(t){
+    const k=Math.min(1,(t-t0)/dur),e=1-Math.pow(1-k,4);
+    rot=start+(end-start)*e;draw();
+    if(k<1)requestAnimationFrame(f);else{spinning=false;rot=mod(end);last=win;
+      $("win").textContent=S.choices[win].name;$("modal").classList.add("show");render()}
+  })(t0);
+};
+$("again").onclick=()=>{$("modal").classList.remove("show");$("spin").click()};
+$("rm").onclick=()=>{S.choices.splice(last,1);$("modal").classList.remove("show");render()};
+$("modal").onclick=e=>{if(e.target.id==="modal")$("modal").classList.remove("show")};
+S.focus=false;render();
+</script>
+</body>
+</html>
